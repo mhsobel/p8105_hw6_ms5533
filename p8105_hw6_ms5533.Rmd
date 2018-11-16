@@ -17,3 +17,55 @@ set.seed(1)
 theme_set(theme_bw() + theme(legend.position = "bottom"))
 ```
 
+# Problem 1
+
+### DATA IMPORT AND TIDY
+
+```{r, eval=FALSE, collapse=TRUE, message=FALSE}
+wp_homicide_data = 
+  read_csv("./data/data-homicides-master/homicide-data.csv") %>% 
+  filter(victim_race == "Unknown") %>% 
+  mutate(city_state = str_c(city, state, sep = ", ")) %>% 
+  group_by(city_state) %>% 
+  summarise()
+  mutate(
+    city_state = str_c(city, state, sep = ", "), 
+    victim_age = as.numeric(victim_age), 
+    victim_race = as_factor(tolower(victim_race)), 
+    victim_race = fct_relevel(victim_race, "white"), 
+    victim_race = fct_collapse(victim_race, non_white = c("hispanic", "black", "asian", "other", "unknown")))
+
+wp_homicide_data
+```
+
+### BALTIMORE, MD  
+#### GLM (resolved/unresolved)
+
+```{r}
+
+```
+
+### ALL CITIES  
+#### GLM (resolved/unresolved)
+
+```{r}
+
+```
+
+### ALL CITIES
+#### Plot - ORs + CIs 
+
+```{r}
+
+```
+
+
+# Problem 2
+
+### DATA IMPORT AND TIDY
+
+```{r, message=FALSE, collapse=TRUE}
+birthweight_data = 
+  read_csv("./data/birthweight.csv")
+```
+
