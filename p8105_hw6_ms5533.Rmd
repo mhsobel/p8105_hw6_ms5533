@@ -1,0 +1,19 @@
+---
+title: "Homework 6"
+author: "Marisa Sobel"
+date: "11/16/2018"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(modelr)
+library(mgcv)
+
+set.seed(1)
+
+theme_set(theme_bw() + theme(legend.position = "bottom"))
+```
+
