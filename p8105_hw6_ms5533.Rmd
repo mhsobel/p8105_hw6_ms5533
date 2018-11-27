@@ -21,17 +21,27 @@ theme_set(theme_bw() + theme(legend.position = "bottom"))
 
 ### DATA IMPORT AND TIDY
 
-```{r, eval=FALSE, collapse=TRUE, message=FALSE}
+```{r, collapse=TRUE, message=FALSE}
 wp_homicide_data = 
   read_csv("./data/data-homicides-master/homicide-data.csv") %>% 
   mutate(city_state = str_c(city, state, sep = ", ")) %>% 
-  filter(victim_race != "Unknown" | victim_age != "Unknown" | city_state == "Tulsa, AL") %>% 
+  filter(city_state != "Tulsa, AL" | city_state != "Dallas, TX" | city_state != "Pheonix, AZ") %>% 
+  select(-uid, -reported_date, -victim_first, -victim_last, -lat, -lon, -city, -state) %>% 
   mutate(
     victim_race = as_factor(tolower(victim_race)), 
     victim_race = fct_relevel(victim_race, "white"), 
     victim_race = fct_collapse(victim_race, non_white = c("hispanic", "black", "asian", "other")), 
-    victim_sex = as_factor(victim_sex), 
-    victim_sex = fct_relevel(victim_sex, "Male"))
+    victim_race = na_if(victim_race, "unknown")) %>% 
+  mutate(
+    victim_sex = as_factor(tolower(victim_sex)), 
+    victim_sex = fct_relevel(victim_sex, "male"), 
+    victim_sex = na_if(victim_sex, "unknown")) %>% 
+  mutate(
+    victim_age = as.numeric(victim_age)) %>% 
+  mutate(
+    disposition = as_factor(disposition), 
+    disposition = fct_collapse(disposition, unresolved = c("Closed without arrest", "Open/No arrest"), resolved = "Closed by arrest"), 
+    disposition = fct_relevel(disposition, "resolved"))
 
 wp_homicide_data
 ```
@@ -40,7 +50,13 @@ wp_homicide_data
 #### GLM (resolved/unresolved)
 
 ```{r}
+baltimore_dat = 
+  wp_homicide_data %>% 
+  filter(city_state == "Baltimore, MD")
 
+fit = glm(disposition ~ victim_age + victim_sex + victim_race, data = baltimore_dat, family = binomial)
+
+  
 ```
 
 ### ALL CITIES  
