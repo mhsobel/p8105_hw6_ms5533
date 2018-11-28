@@ -175,16 +175,25 @@ As expected, increased gestational age, mother's weight gain, and mother's BMI b
 
 ### RESIDUALS PLOT
 
-```{r, eval=FALSE}
+```{r, message=FALSE}
 # add residuals and predicitions to `birthweight_data`
-birthweight_data %>% 
+residual_plot = 
+  birthweight_data %>% 
   modelr::add_residuals(bwt_lm) %>% 
   modelr::add_predictions(bwt_lm) %>% 
   ggplot(aes(x = pred, y = resid)) +
   geom_point() +
-  geom_smooth()
+  geom_smooth() +
+  labs(
+    x = "Predictions", 
+    y = "Residuals", 
+    title = "Proposed model residuals vs. fitted values"
+  )
+
+residual_plot
 ```
 
+The residuals decrease at first, increase in the thick of the plot, and decrease again. However, there is no observable trend. 
 
 
 
