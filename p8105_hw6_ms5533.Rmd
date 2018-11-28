@@ -28,27 +28,36 @@ theme_set(theme_bw() + theme(legend.position = "bottom"))
 wp_homicide_data = 
   read_csv("./data/data-homicides-master/homicide-data.csv", na = c("", "Unknown", "NA")) %>% 
   mutate(city_state = str_c(city, state, sep = ", ")) %>% 
-  filter(!city_state %in% c("Dallas, TX", "Pheonix, AZ", "Tulsa, AL")) %>% 
-  filter(victim_race != "NA" | victim_age != "NA") %>% 
-  select(-uid, -reported_date, -victim_first, -victim_last, -lat, -lon, -city, -state) %>% 
+  filter(!city_state %in% c("Dallas, TX", "Pheonix, AZ", "Kansas City, MO", "Tulsa, AL")) %>% 
+  filter(victim_race != "NA") %>% 
+  filter(victim_age != "NA") %>% 
+  filter(victim_sex != "NA") %>% 
   mutate(
     victim_race = as_factor(case_when(
       victim_race == "White" ~ "white", 
       victim_race != "white" ~ "non-white")), 
     victim_race = fct_relevel(victim_race, "white"),
     victim_sex = as_factor(tolower(victim_sex)), 
-    victim_sex = fct_relevel(victim_sex, "male"), 
+    victim_sex = fct_relevel(victim_sex, "female"), 
     victim_age = as.numeric(victim_age),
     outcome = as_factor(case_when(
-      disposition == "Closed by arrest" ~ "resolved", 
+      disposition == "Closed by arrest" ~ "resolved",
       disposition == "Closed without arrest" ~ "unresolved", 
-      disposition == "Open/No arrest" ~ "unresolved")))
+      disposition == "Open/No arrest" ~ "unresolved"))) %>% 
+  select(-uid, -reported_date, -victim_first, -victim_last, -lat, -lon, -city, -state, -disposition)
 
 wp_homicide_data
 ```
 
+The original dataset had 52,169 entries. `r 52169-49411` entries were removed from cities that did not have race data in full ("Dallas, TX", "Pheonix, AZ", "Kansas City, MO", "Tulsa, AL"). `r 49411 - 47969` entries were removed for missing race information, `r 47969 - 47578` entries were removed for missing age information, and `r 47578 - 47525` entries were removed for missing sex information.  
+
+Victim race is coded as binary as white and non-white, with white as the reference category.  
+Victim sex is coded as binary as female and male, with female as the refrence category.  
+The homicide outcome is coded as binary as resolved and unresolved, where resolved includes "Closed by arrest" and unresolved includes "closed without arrest" and "open/no arrest". 
+
 ### BALTIMORE, MD  
-#### GLM (resolved/unresolved)
+
+Run `glm` (resolved/unresolved) for Baltimore, MD comparing non-white victims to white victims and accounting for sex and age. 
 
 ```{r}
 # baltimore glm model 
@@ -59,28 +68,66 @@ glm_baltimore =
 
 # get OR and CIs
 tidy(glm_baltimore, conf.int = TRUE) %>% 
-  mutate(OR = inv.logit(estimate), 
-         CI_low = inv.logit(conf.low), 
-         CI_high = inv.logit(conf.high)) %>% 
+  mutate(OR = exp(estimate), 
+         CI_low = exp(conf.low), 
+         CI_high = exp(conf.high)) %>% 
   select(term, OR, CI_low, CI_high) %>% 
   filter(term == "victim_racenon-white") %>% 
   knitr::kable(digits = 3)
 ```
 
+For the city of Baltimore, MD, the odds of solving homicides among non-whites is 0.441 (95% CI: 0.312, 0.62) times the odds of solving homicides among whites. Conversly, the odds of solving homicides among whites is `r round(1/0.441, digits = 2)` times the odds of solving homicides among non-whites in Baltimore, MD. 
+
 ### ALL CITIES  
 #### GLM (resolved/unresolved)
 
-```{r}
+Run `glm` (resolved/unresolved) for all cities comparing non-white victims to white victims and accounting for sex and age. 
 
+```{r}
+# all cities glm model 
+glm_all_cities = 
+  wp_homicide_data %>% 
+  group_by(city_state) %>% 
+  nest() %>% 
+  mutate(
+    model = map(data, ~tidy(glm(outcome ~ victim_age + victim_sex + victim_race, 
+                                data = ., family = binomial), conf.int = TRUE))) %>% 
+  select(-data) %>% 
+  unnest()
+  
+# get OR and CIs
+or_all_cities = 
+  glm_all_cities %>% 
+  mutate(OR = exp(estimate), 
+         CI_low = exp(conf.low), 
+         CI_high = exp(conf.high)) %>% 
+  select(city_state, term, OR, CI_low, CI_high) %>% 
+  filter(term == "victim_racenon-white") %>% 
+  mutate(city_state = fct_reorder(city_state, OR)) %>% 
+  arrange(city_state, desc(OR))
+
+or_all_cities
 ```
+
+Use the `or_all_cities` dataframe to plot ORs and CIs for all cities. 
 
 ### ALL CITIES
 #### Plot - ORs + CIs 
 
 ```{r}
-
+or_all_cities %>% 
+  ggplot(aes(x = city_state, y = OR)) +
+  geom_hline(aes(yintercept = 1), color = "red") +
+  geom_point() +
+  geom_errorbar(aes(ymin = CI_low, ymax = CI_high)) + 
+  coord_flip() + 
+  labs(
+    x = "OR (95% CI)", 
+    y = "City, State", 
+    title = "Solved homicides, comparing non-white victims to white victims")
 ```
 
+After adjusting for victim age and sex, the plot above illustrates the ORs (95% CI) of a homicide being solved comparing non-white victims to white victims. Most cities have higher odds of homicides being solved if the victim is white (OR < 1), except for Tampa, Birmigham, and Durham. Durham has the largest CI, and there seems to be a trend of larger CIs the closer the OR gets to 1, the null value for ORs. 
 
 # Problem 2
 
