@@ -133,17 +133,28 @@ After adjusting for victim age and sex, the plot above illustrates the ORs (95% 
 
 ### DATA IMPORT AND TIDY
 
-```{r, message=FALSE, collapse=TRUE, eval=FALSE}
+```{r, message=FALSE, collapse=TRUE}
+# load data and transform factors
 birthweight_data = 
   read_csv("./data/birthweight.csv") %>% 
   mutate(
-    babysex = factor(babysex, labels = c("male", "female")), 
-    frace = factor(frace, labels = c("white", "black", "asian", "puerto_rican", "other", "unknown")))
+    babysex = factor(babysex), 
+    frace = factor(frace), 
+    malform = factor(malform), 
+    mrace = factor(mrace))
 
+birthweight_data
 
-  mutate(
-    name = recode(id, USW00094728 = "CentralPark_NY", 
-                      USC00519397 = "Waikiki_HA",
-                      USS0023B17S = "Waterhole_WA"),
+# check for missing data
+birthweight_data %>% 
+  is.na() %>% summary()
 ```
+
+There are `r nrow(birthweight_data)` entries in the birthweight dataset. All of the original subjects have all data; no entry was dropped. 
+
+
+
+
+
+
 
