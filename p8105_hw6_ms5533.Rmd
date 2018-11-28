@@ -156,7 +156,7 @@ There are `r nrow(birthweight_data)` entries in the birthweight dataset. All of 
 
 I propose a linear model as birthweight is a continuous outcome. Based on previous knowledge, infant birthweight is affected by gestational age, mother's weight gain during pregnancy, and cigarette smoking. I am also including mother's BMI before pregnancy to account for differences in body type. I am expecting increases in gestational age and mother's weight gain to have a positive effect on birthweight, whereas increased smoking should have a decreased effect. I am refraining from adding in other demographic parameters at the moment as I do not want to overcomplicate the model. 
 
-```{r}
+```{r, collapse=TRUE}
 # naming model
 bwt_lm = lm(bwt ~ gaweeks + ppbmi + wtgain + smoken, data = birthweight_data)
   
@@ -166,6 +166,10 @@ bwt_lm_output =
   lm(bwt ~ gaweeks + ppbmi + wtgain + smoken, data = .) %>% 
   tidy(conf.int = TRUE) %>% 
   select(term, estimate, conf.low, conf.high)
+
+birthweight_data %>% 
+  lm(bwt ~ gaweeks + ppbmi + wtgain + smoken, data = .) %>% 
+  glance()
 
 bwt_lm_output %>% 
   knitr::kable(digits = 3)
@@ -194,6 +198,25 @@ residual_plot
 ```
 
 The residuals decrease at first, increase in the thick of the plot, and decrease again. However, there is no observable trend. 
+
+### MODEL COMPARISON
+
+1. Length at birth and gestational age as predictors (main effects only). 
+2. Head circumference, length, sex, and all interactions (including the three-way interaction) between these. 
+
+```{r, collapse=TRUE}
+# model 1 comparison 
+model_compare_1 = lm(bwt ~ blength + gaweeks, data = birthweight_data)
+
+model_compare_1 %>% tidy()
+model_compare_1 %>%  glance()
+
+# model 2 comparison 
+model_compare_2 = lm(bwt ~ blength + gaweeks, data = birthweight_data)
+
+model_compare_2 %>% tidy()
+model_compare_2 %>%  glance()
+```
 
 
 
