@@ -157,20 +157,32 @@ There are `r nrow(birthweight_data)` entries in the birthweight dataset. All of 
 I propose a linear model as birthweight is a continuous outcome. Based on previous knowledge, infant birthweight is affected by gestational age, mother's weight gain during pregnancy, and cigarette smoking. I am also including mother's BMI before pregnancy to account for differences in body type. I am expecting increases in gestational age and mother's weight gain to have a positive effect on birthweight, whereas increased smoking should have a decreased effect. I am refraining from adding in other demographic parameters at the moment as I do not want to overcomplicate the model. 
 
 ```{r}
-bwt_lm = 
+# naming model
+bwt_lm = lm(bwt ~ gaweeks + ppbmi + wtgain + smoken, data = birthweight_data)
+  
+# model output
+bwt_lm_output = 
   birthweight_data %>% 
   lm(bwt ~ gaweeks + ppbmi + wtgain + smoken, data = .) %>% 
   tidy(conf.int = TRUE) %>% 
   select(term, estimate, conf.low, conf.high)
 
-bwt_lm %>% 
+bwt_lm_output %>% 
   knitr::kable(digits = 3)
 ```
 
+As expected, increased gestational age, mother's weight gain, and mother's BMI before pregnancy all resulted in positive beta coefficients, whereas increased smoking had a negative effect on birthweight. 
+
 ### RESIDUALS PLOT
 
-```{r}
-
+```{r, eval=FALSE}
+# add residuals and predicitions to `birthweight_data`
+birthweight_data %>% 
+  modelr::add_residuals(bwt_lm) %>% 
+  modelr::add_predictions(bwt_lm) %>% 
+  ggplot(aes(x = pred, y = resid)) +
+  geom_point() +
+  geom_smooth()
 ```
 
 
