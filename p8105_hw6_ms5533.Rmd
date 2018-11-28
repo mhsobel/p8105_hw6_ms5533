@@ -11,6 +11,9 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(modelr)
 library(mgcv)
+library(broom)
+library(boot)
+library(modelr)
 
 set.seed(1)
 
@@ -23,25 +26,23 @@ theme_set(theme_bw() + theme(legend.position = "bottom"))
 
 ```{r, collapse=TRUE, message=FALSE}
 wp_homicide_data = 
-  read_csv("./data/data-homicides-master/homicide-data.csv") %>% 
+  read_csv("./data/data-homicides-master/homicide-data.csv", na = c("", "Unknown", "NA")) %>% 
   mutate(city_state = str_c(city, state, sep = ", ")) %>% 
-  filter(city_state != "Tulsa, AL" | city_state != "Dallas, TX" | city_state != "Pheonix, AZ") %>% 
+  filter(!city_state %in% c("Dallas, TX", "Pheonix, AZ", "Tulsa, AL")) %>% 
+  filter(victim_race != "NA" | victim_age != "NA") %>% 
   select(-uid, -reported_date, -victim_first, -victim_last, -lat, -lon, -city, -state) %>% 
   mutate(
-    victim_race = as_factor(tolower(victim_race)), 
-    victim_race = fct_relevel(victim_race, "white"), 
-    victim_race = fct_collapse(victim_race, non_white = c("hispanic", "black", "asian", "other")), 
-    victim_race = na_if(victim_race, "unknown")) %>% 
-  mutate(
+    victim_race = as_factor(case_when(
+      victim_race == "White" ~ "white", 
+      victim_race != "white" ~ "non-white")), 
+    victim_race = fct_relevel(victim_race, "white"),
     victim_sex = as_factor(tolower(victim_sex)), 
     victim_sex = fct_relevel(victim_sex, "male"), 
-    victim_sex = na_if(victim_sex, "unknown")) %>% 
-  mutate(
-    victim_age = as.numeric(victim_age)) %>% 
-  mutate(
-    disposition = as_factor(disposition), 
-    disposition = fct_collapse(disposition, unresolved = c("Closed without arrest", "Open/No arrest"), resolved = "Closed by arrest"), 
-    disposition = fct_relevel(disposition, "resolved"))
+    victim_age = as.numeric(victim_age),
+    outcome = as_factor(case_when(
+      disposition == "Closed by arrest" ~ "resolved", 
+      disposition == "Closed without arrest" ~ "unresolved", 
+      disposition == "Open/No arrest" ~ "unresolved")))
 
 wp_homicide_data
 ```
@@ -50,13 +51,20 @@ wp_homicide_data
 #### GLM (resolved/unresolved)
 
 ```{r}
-baltimore_dat = 
+# baltimore glm model 
+glm_baltimore = 
   wp_homicide_data %>% 
-  filter(city_state == "Baltimore, MD")
+  filter(city_state == "Baltimore, MD") %>% 
+  glm(outcome ~ victim_age + victim_sex + victim_race, data = ., family = binomial)
 
-fit = glm(disposition ~ victim_age + victim_sex + victim_race, data = baltimore_dat, family = binomial)
-
-  
+# get OR and CIs
+tidy(glm_baltimore, conf.int = TRUE) %>% 
+  mutate(OR = inv.logit(estimate), 
+         CI_low = inv.logit(conf.low), 
+         CI_high = inv.logit(conf.high)) %>% 
+  select(term, OR, CI_low, CI_high) %>% 
+  filter(term == "victim_racenon-white") %>% 
+  knitr::kable(digits = 3)
 ```
 
 ### ALL CITIES  
