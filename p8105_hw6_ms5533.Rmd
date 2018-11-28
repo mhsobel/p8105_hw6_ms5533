@@ -209,14 +209,27 @@ The residuals decrease at first, increase in the thick of the plot, and decrease
 model_compare_1 = lm(bwt ~ blength + gaweeks, data = birthweight_data)
 
 model_compare_1 %>% tidy()
+
 model_compare_1 %>%  glance()
 
 # model 2 comparison 
-model_compare_2 = lm(bwt ~ blength + gaweeks, data = birthweight_data)
+model_compare_2 = lm(bwt ~ bhead + blength + babysex + bhead*blength 
+                     + bhead*babysex + blength*babysex + bhead*blength*babysex, 
+                     data = birthweight_data)
 
 model_compare_2 %>% tidy()
+
 model_compare_2 %>%  glance()
 ```
+
+### CROSS VALIDATION
+
+```{r}
+#cross_validation = 
+  
+```
+
+
 
 
 
