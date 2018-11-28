@@ -197,7 +197,7 @@ residual_plot =
 residual_plot
 ```
 
-The residuals decrease at first, increase in the thick of the plot, and decrease again. However, there is no observable trend. 
+The residuals decrease at first, increase in the thick of the plot, and decrease again. However, there is no observable trend of residuals with predicted values. 
 
 ### MODEL COMPARISON
 
@@ -210,7 +210,7 @@ model_compare_1 = lm(bwt ~ blength + gaweeks, data = birthweight_data)
 
 model_compare_1 %>% tidy()
 
-model_compare_1 %>%  glance()
+model_compare_1 %>% glance()
 
 # model 2 comparison 
 model_compare_2 = lm(bwt ~ bhead + blength + babysex + bhead*blength 
@@ -219,12 +219,12 @@ model_compare_2 = lm(bwt ~ bhead + blength + babysex + bhead*blength
 
 model_compare_2 %>% tidy()
 
-model_compare_2 %>%  glance()
+model_compare_2 %>% glance()
 ```
 
 ### CROSS VALIDATION
 
-```{r, eval=FALSE}
+```{r, collapse=TRUE}
 # cross validation dataframe 
 cv_df =
   crossv_mc(birthweight_data, 100) %>% 
@@ -233,6 +233,7 @@ cv_df =
 
 # fit models
 cv_df = 
+  cv_df %>% 
   mutate(
     proposed_model = map(train, ~lm(bwt ~ gaweeks + ppbmi + wtgain + smoken, 
                                     data = birthweight_data)), 
@@ -242,24 +243,27 @@ cv_df =
                                      + bhead*blength*babysex, data = birthweight_data))) %>% 
   mutate(
     rmse_proposed = map2_dbl(proposed_model, test, ~rmse(model = .x, data = .y)), 
-    rsme_compare_1 = map2_dbl(compare_model_1, test, ~rmse(model = .x, data = .y)), 
-    rsme_compare_2 = map2_dbl(compare_model_2, test, ~rmse(model = .x, data = .y)))
+    rmse_compare_1 = map2_dbl(compare_model_1, test, ~rmse(model = .x, data = .y)), 
+    rmse_compare_2 = map2_dbl(compare_model_2, test, ~rmse(model = .x, data = .y)))
 
-# 
-cv_df = 
-  cv_df %>% 
-  mutate(lin_mod = map(train, ~lm(armc ~ weight, data = .x)),
-         pwl_mod = map(train, ~lm(armc ~ weight + weight_sp, data = .x)),
-         nonlin_mod = map(train, ~gam(armc ~ s(weight), data = as_tibble(.x)))) %>% 
-  mutate(rmse_lin    = map2_dbl(lin_mod, test, ~rmse(model = .x, data = .y)),
-         rmse_pwl = map2_dbl(pwl_mod, test, ~rmse(model = .x, data = .y)),
-         rmse_nonlin = map2_dbl(nonlin_mod, test, ~rmse(model = .x, data = .y)))
-
-
-
+# plot of rsme distribution
+cv_df %>% 
+  select(starts_with("rmse")) %>% 
+  gather(key = model, value = rmse) %>% 
+  mutate(model = str_replace(model, "rmse_", ""),
+         model = fct_inorder(model)) %>% 
+  ggplot(aes(x = model, y = rmse)) + geom_violin() + 
+  labs(
+    y = "RMSE", 
+    x = "Regression Model", 
+    title = "Distribution of RMSE values across 3 models for birthweight", 
+    caption = "Proposed Model: gestational age, mother's weight gain during pregnancy, mother's BMI before pregnancy, cigarette smoking. 
+Compare Model 1. Length at birth and gestational age as predictors (main effects only). 
+    Compare Model 2. Head circumference, length, sex, and all interactions (including the three-way interaction) between these."
+  )
 ```
 
-
+My proposed model has much larger RMSE values, whereas the proposed model with large amounts of interaction included has the lowest RMSE values. It seems that it is beneficial to include interaction terms, as many of the parameters  in the dataset do in fact interact with one another. Future models should try to incorporate more interaction terms for birthweight. 
 
 
 
